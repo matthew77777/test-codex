@@ -10,8 +10,31 @@ header {
   color: #fff;
 }
 
-nav a {
+.container {
+  padding: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.nav a {
   margin-right: 1rem;
   color: #fff;
   text-decoration: none;
 }
+
+.product-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.cart-list li {
+  margin-bottom: 0.5rem;
+}
+
+.product-item {
+  border: 1px solid #ccc;
+  padding: 1rem;
+  text-align: center;
+}
+

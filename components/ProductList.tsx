@@ -3,7 +3,7 @@ import { products } from '../data/products';
 
 const ProductList = () => {
   return (
-    <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))' }}>
+    <div className="product-grid">
       {products.map(product => (
         <ProductItem key={product.id} product={product} />
       ))}

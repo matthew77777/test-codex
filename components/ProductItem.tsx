@@ -9,7 +9,7 @@ interface Props {
 const ProductItem = ({ product }: Props) => {
   const { addToCart } = useCart();
   return (
-    <div style={{ border: '1px solid #ccc', padding: '1rem' }}>
+    <div className="product-item">
       <Image src={product.image} alt={product.name} width={200} height={200} />
       <h3>{product.name}</h3>
       <p>${product.price}</p>
