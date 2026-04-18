@@ -66,6 +66,16 @@ export default function MixedBarLineChart({
 
   const detectedPeakCuts = data.filter((item) => item.peakCutDetected);
   const isOverThreshold = typeof threshold === 'number' && detectedPeakCuts.length > 0;
+  const peakCutSummary = useMemo(() => {
+    const bucket: Record<string, number> = {};
+    detectedPeakCuts.forEach((item) => {
+      const minuteKey = item.time.slice(0, 5);
+      bucket[minuteKey] = (bucket[minuteKey] ?? 0) + 1;
+    });
+    return Object.entries(bucket)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-4);
+  }, [detectedPeakCuts]);
 
   const yTicks = useMemo(() => {
     const steps = 4;
@@ -162,11 +172,16 @@ export default function MixedBarLineChart({
 
         {isOverThreshold && showThresholdWarning ? (
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-red-700">
-            {detectedPeakCuts.slice(-8).map((item) => (
-              <span key={`${item.timestamp}-badge`} className="rounded-full border border-red-200 bg-red-50 px-2 py-1">
-                発生: {item.time}
+            {peakCutSummary.map(([minute, count]) => (
+              <span key={`${minute}-badge`} className="rounded-full border border-red-200 bg-red-50 px-2 py-1">
+                {minute}台: {count}件
               </span>
             ))}
+            {detectedPeakCuts.length > peakCutSummary.length ? (
+              <span className="rounded-full border border-red-200 bg-red-50 px-2 py-1">
+                合計 {detectedPeakCuts.length} 件
+              </span>
+            ) : null}
           </div>
         ) : null}
 

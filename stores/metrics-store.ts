@@ -99,8 +99,12 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
       const next = [...series];
       const last = { ...next[next.length - 1] };
 
-      last.actual = clamp(Number((last.actual + (Math.random() - 0.5) * 0.2).toFixed(2)), 0, 8);
-      last.forecast = clamp(Number((last.forecast + (Math.random() - 0.5) * 0.1).toFixed(2)), 0, 8);
+      const actualNoise = (Math.random() - 0.5) * 0.16;
+      const forecastNoise = (Math.random() - 0.5) * 0.06;
+      const meanReversion = (last.forecast - last.actual) * 0.25;
+
+      last.actual = clamp(Number((last.actual + meanReversion + actualNoise).toFixed(2)), 0.8, 8);
+      last.forecast = clamp(Number((last.forecast + forecastNoise).toFixed(2)), 0.8, 8);
       last.time = formatTime(now);
       last.timestamp = now;
 

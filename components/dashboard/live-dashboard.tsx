@@ -2,25 +2,21 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import MixedBarLineChart from '@/components/charts/mixed-bar-line-chart';
+import ChartControls from '@/components/dashboard/chart-controls';
+import InfoPanels from '@/components/dashboard/info-panels';
+import KpiCards from '@/components/dashboard/kpi-cards';
 import { useMetricsStore } from '@/stores/metrics-store';
 import { useShallow } from 'zustand/react/shallow';
 
-const cardTone: Record<string, string> = {
-  warm: 'from-[#fff6ea] to-white',
-  sky: 'from-[#ecf5ff] to-white',
-  mint: 'from-[#e9fff3] to-white',
-  purple: 'from-[#f4efff] to-white'
-};
-
 const LOOKBACK_OPTIONS = [
-  { label: '1分', seconds: 60 },
   { label: '5分', seconds: 300 },
-  { label: '15分', seconds: 900 }
+  { label: '15分', seconds: 900 },
+  { label: '30分', seconds: 1800 }
 ];
 
 export default function LiveDashboard() {
   const [lookbackSec, setLookbackSec] = useState(300);
-  const [minutesAgo, setMinutesAgo] = useState(0);
+  const [minutesAgo, setMinutesAgo] = useState(5);
 
   const { data, loading, error, startRealtime, demandHistory, solarHistory } = useMetricsStore(
     useShallow((state) => ({
@@ -69,60 +65,15 @@ export default function LiveDashboard() {
         </p>
       </header>
 
-      <section className="mt-4 rounded-2xl border border-brand-line bg-white p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="m-0 text-sm font-medium text-brand-sub">表示期間:</p>
-          {LOOKBACK_OPTIONS.map((option) => (
-            <button
-              key={option.seconds}
-              type="button"
-              onClick={() => setLookbackSec(option.seconds)}
-              className={`rounded-full px-3 py-1 text-sm ${
-                lookbackSec === option.seconds
-                  ? 'bg-[#2248a8] text-white'
-                  : 'border border-brand-line bg-white text-brand-sub hover:bg-[#f5f8ff]'
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
+      <ChartControls
+        options={LOOKBACK_OPTIONS}
+        lookbackSec={lookbackSec}
+        minutesAgo={minutesAgo}
+        onLookbackChange={setLookbackSec}
+        onMinutesAgoChange={setMinutesAgo}
+      />
 
-          <label className="ml-auto flex items-center gap-2 text-sm text-brand-sub">
-            何分前を表示
-            <input
-              type="range"
-              min={0}
-              max={60}
-              value={minutesAgo}
-              onChange={(e) => setMinutesAgo(Number(e.target.value))}
-            />
-            <span className="w-10 text-right">{minutesAgo}分</span>
-          </label>
-        </div>
-      </section>
-
-      <section className="mt-[18px] grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
-        <article className={`rounded-2xl border border-brand-line bg-gradient-to-b ${cardTone.warm} p-3.5`}>
-          <h2 className="m-0 text-base text-brand-sub">今日の使用量</h2>
-          <p className="my-2 text-3xl font-bold">{data.cards.todayUsage.toFixed(1)} kWh</p>
-          <small className="text-brand-sub">家族4人の平均より少し省エネです。</small>
-        </article>
-        <article className={`rounded-2xl border border-brand-line bg-gradient-to-b ${cardTone.sky} p-3.5`}>
-          <h2 className="m-0 text-base text-brand-sub">太陽光の割合</h2>
-          <p className="my-2 text-3xl font-bold">{data.cards.solarShare.toFixed(0)}%</p>
-          <small className="text-brand-sub">昼間の電力の大半を自家発電でまかなっています。</small>
-        </article>
-        <article className={`rounded-2xl border border-brand-line bg-gradient-to-b ${cardTone.mint} p-3.5`}>
-          <h2 className="m-0 text-base text-brand-sub">エコスコア</h2>
-          <p className="my-2 text-3xl font-bold">{data.cards.ecoScore} 点</p>
-          <small className="text-brand-sub">昨日より +3 点。とても良いペースです。</small>
-        </article>
-        <article className={`rounded-2xl border border-brand-line bg-gradient-to-b ${cardTone.purple} p-3.5`}>
-          <h2 className="m-0 text-base text-brand-sub">節約できた金額</h2>
-          <p className="my-2 text-3xl font-bold">¥{Math.round(data.cards.savedCost).toLocaleString()}</p>
-          <small className="text-brand-sub">今月の累計。ゲーム感覚で続けましょう！</small>
-        </article>
-      </section>
+      <KpiCards cards={data.cards} />
 
       <section className="mt-3.5 grid grid-cols-[1.4fr_1.4fr_1fr] gap-3 max-lg:grid-cols-1">
         <MixedBarLineChart
@@ -139,34 +90,7 @@ export default function LiveDashboard() {
           data={solarWindow.length ? solarWindow : data.solarSeries}
         />
 
-        <article className="rounded-2xl border border-brand-line bg-white p-4">
-          <h3 className="m-0 text-base font-semibold">いまの電力フロー</h3>
-          <ul className="m-0 mt-2 list-none p-0">
-            <li className="my-2 flex items-center justify-between rounded-xl border border-[#e8efff] bg-[#f8fbff] p-2.5 text-[#2d446d]">
-              <span>🏠 家庭で使用中</span>
-              <strong>{data.flow.home.toFixed(2)} kW</strong>
-            </li>
-            <li className="my-2 flex items-center justify-between rounded-xl border border-[#e8efff] bg-[#f8fbff] p-2.5 text-[#2d446d]">
-              <span>🔋 蓄電池</span>
-              <strong>{data.flow.battery.toFixed(2)} kW</strong>
-            </li>
-            <li className="my-2 flex items-center justify-between rounded-xl border border-[#e8efff] bg-[#f8fbff] p-2.5 text-[#2d446d]">
-              <span>⚡ 電力会社から</span>
-              <strong>{data.flow.grid.toFixed(2)} kW</strong>
-            </li>
-          </ul>
-        </article>
-
-        <article className="rounded-2xl border border-brand-line bg-white p-4">
-          <h3 className="m-0 text-base font-semibold">おすすめアクション</h3>
-          <ol className="m-0 mt-2 pl-[1.1rem] text-[#2d446d]">
-            {data.tips.map((tip) => (
-              <li className="my-2" key={tip}>
-                {tip}
-              </li>
-            ))}
-          </ol>
-        </article>
+        <InfoPanels flow={data.flow} tips={data.tips} />
       </section>
     </main>
   );
