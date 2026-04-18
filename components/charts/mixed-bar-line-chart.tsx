@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import type { SeriesPoint } from '@/lib/types/metrics';
 
 type Props = {
@@ -9,6 +10,7 @@ type Props = {
   data: SeriesPoint[];
   threshold?: number;
   showThresholdWarning?: boolean;
+  controls?: ReactNode;
 };
 
 const getLinePoints = (values: number[], width: number, height: number, max: number) => {
@@ -46,7 +48,8 @@ export default function MixedBarLineChart({
   unit,
   data,
   threshold,
-  showThresholdWarning = false
+  showThresholdWarning = false,
+  controls
 }: Props) {
   const [expanded, setExpanded] = useState(false);
 
@@ -150,7 +153,9 @@ export default function MixedBarLineChart({
             <h3 className="m-0 text-base font-semibold text-brand-navy">{title}</h3>
             <p className="m-0 text-xs text-brand-sub">実績は棒、予測は折れ線で表示</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col items-end gap-2">
+            {controls}
+            <div className="flex items-center gap-2">
             <span className="text-sm text-brand-sub">{unit}</span>
             <button
               type="button"
@@ -159,6 +164,7 @@ export default function MixedBarLineChart({
             >
               拡大
             </button>
+            </div>
           </div>
         </div>
 

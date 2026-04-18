@@ -109,8 +109,6 @@ export default function LiveDashboard() {
         </p>
       </header>
 
-      <ChartControls options={LOOKBACK_OPTIONS} lookbackSec={lookbackSec} onLookbackChange={setLookbackSec} />
-
       <KpiCards cards={data.cards} />
 
       <section className="mt-3.5 grid grid-cols-[1.4fr_1.4fr_1fr] gap-3 max-lg:grid-cols-1">
@@ -120,12 +118,28 @@ export default function LiveDashboard() {
           data={demandWindow.length ? demandWindow : data.demandSeries}
           threshold={data.threshold.peakCutKw}
           showThresholdWarning
+          controls={
+            <ChartControls
+              options={LOOKBACK_OPTIONS}
+              lookbackSec={lookbackSec}
+              onLookbackChange={setLookbackSec}
+              compact
+            />
+          }
         />
 
         <MixedBarLineChart
           title="太陽光発電（実績・予測）"
           unit="kW"
           data={solarWindow.length ? solarWindow : data.solarSeries}
+          controls={
+            <ChartControls
+              options={LOOKBACK_OPTIONS}
+              lookbackSec={lookbackSec}
+              onLookbackChange={setLookbackSec}
+              compact
+            />
+          }
         />
 
         <InfoPanels flow={data.flow} tips={data.tips} />
