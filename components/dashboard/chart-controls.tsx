@@ -6,18 +6,10 @@ type Option = {
 type Props = {
   options: Option[];
   lookbackSec: number;
-  minutesAgo: number;
   onLookbackChange: (seconds: number) => void;
-  onMinutesAgoChange: (minutes: number) => void;
 };
 
-export default function ChartControls({
-  options,
-  lookbackSec,
-  minutesAgo,
-  onLookbackChange,
-  onMinutesAgoChange
-}: Props) {
+export default function ChartControls({ options, lookbackSec, onLookbackChange }: Props) {
   return (
     <section className="mt-4 rounded-2xl border border-brand-line bg-white p-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -36,18 +28,7 @@ export default function ChartControls({
             {option.label}
           </button>
         ))}
-
-        <label className="ml-auto flex items-center gap-2 text-sm text-brand-sub">
-          何分前を表示
-          <input
-            type="range"
-            min={5}
-            max={60}
-            value={minutesAgo}
-            onChange={(e) => onMinutesAgoChange(Number(e.target.value))}
-          />
-          <span className="w-12 text-right">{minutesAgo}分</span>
-        </label>
+        <span className="ml-auto text-xs text-brand-sub">グラフは30分単位で集計表示</span>
       </div>
     </section>
   );

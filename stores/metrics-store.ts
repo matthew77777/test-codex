@@ -17,8 +17,9 @@ type MetricsState = {
   startRealtime: () => () => void;
 };
 
-const HISTORY_LIMIT = 720;
+const HISTORY_LIMIT = 20_000;
 const LIVE_POINT_INTERVAL_MS = 5_000;
+const HALF_HOUR_MS = 30 * 60 * 1000;
 
 const formatTime = (timestamp: number) =>
   new Date(timestamp).toLocaleTimeString('ja-JP', {
@@ -33,6 +34,36 @@ const pushWithLimit = (history: SeriesPoint[], point: SeriesPoint) => {
   const next = [...history, point];
   if (next.length <= HISTORY_LIMIT) return next;
   return next.slice(next.length - HISTORY_LIMIT);
+};
+
+const buildSyntheticHistory = (latestPoints: SeriesPoint[], threshold: number): SeriesPoint[] => {
+  if (!latestPoints.length) return [];
+
+  const latest = latestPoints[latestPoints.length - 1];
+  const pointsPerYear = 365 * 48;
+  const history: SeriesPoint[] = [];
+
+  let actual = latest.actual;
+  let forecast = latest.forecast;
+
+  for (let i = pointsPerYear; i >= 1; i -= 1) {
+    const timestamp = latest.timestamp - i * HALF_HOUR_MS;
+    const dailyWave = Math.sin((i / 48) * Math.PI * 2) * 0.25;
+    const noise = (Math.random() - 0.5) * 0.12;
+
+    actual = clamp(Number((actual * 0.93 + latest.actual * 0.07 + dailyWave + noise).toFixed(2)), 0.8, 8);
+    forecast = clamp(Number((forecast * 0.94 + latest.forecast * 0.06 + dailyWave * 0.8).toFixed(2)), 0.8, 8);
+
+    history.push({
+      timestamp,
+      time: formatTime(timestamp),
+      actual,
+      forecast,
+      peakCutDetected: actual >= threshold
+    });
+  }
+
+  return [...history, ...latestPoints];
 };
 
 let fetchIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -64,19 +95,23 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
         };
       });
 
-      const demandHistory = normalizedDemand.reduce(
-        (acc, point) => pushWithLimit(acc, point),
-        get().demandHistory
-      );
-      const solarHistory = json.solarSeries.reduce(
-        (acc, point) => pushWithLimit(acc, point),
-        get().solarHistory
-      );
+      const demandHistoryBase = get().demandHistory;
+      const solarHistoryBase = get().solarHistory;
+
+      const demandHistorySeed =
+        demandHistoryBase.length === 0
+          ? buildSyntheticHistory(normalizedDemand, threshold)
+          : normalizedDemand.reduce((acc, point) => pushWithLimit(acc, point), demandHistoryBase);
+
+      const solarHistorySeed =
+        solarHistoryBase.length === 0
+          ? buildSyntheticHistory(json.solarSeries, threshold)
+          : json.solarSeries.reduce((acc, point) => pushWithLimit(acc, point), solarHistoryBase);
 
       set({
         data: { ...json, demandSeries: normalizedDemand, fetchedAt: new Date().toISOString() },
-        demandHistory,
-        solarHistory,
+        demandHistory: demandHistorySeed,
+        solarHistory: solarHistorySeed,
         peakCutHistory,
         loading: false,
         error: null
