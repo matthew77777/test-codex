@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { POLLING_INTERVAL_MS } from '@/lib/constants/thresholds';
 import type { MetricsResponse } from '@/lib/types/metrics';
 
@@ -14,6 +14,7 @@ export const useLiveMetrics = (): Result => {
   const [data, setData] = useState<MetricsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const peakCutHistoryRef = useRef<Record<string, true>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -35,6 +36,14 @@ export const useLiveMetrics = (): Result => {
 
         const json: MetricsResponse = await res.json();
 
+        const threshold = json.threshold.peakCutKw;
+        json.demandSeries.forEach((point) => {
+          if (point.actual >= threshold) {
+            peakCutHistoryRef.current[point.time] = true;
+          }
+          point.peakCutDetected = point.actual >= threshold || !!peakCutHistoryRef.current[point.time];
+        });
+
         if (!mounted) return;
         setData(json);
         setError(null);
@@ -46,7 +55,6 @@ export const useLiveMetrics = (): Result => {
           setLoading(false);
         }
       }
-
     };
 
     fetchMetrics();

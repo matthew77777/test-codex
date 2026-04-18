@@ -2,6 +2,7 @@ export type SeriesPoint = {
   time: string;
   actual: number;
   forecast: number;
+  peakCutDetected?: boolean;
 };
 
 export type MetricsResponse = {

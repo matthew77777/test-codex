@@ -40,8 +40,8 @@ export default function MixedBarLineChart({
     maxValue * 1.1
   );
 
-  const isOverThreshold =
-    typeof threshold === 'number' && data.some((item) => item.actual >= threshold);
+  const detectedPeakCuts = data.filter((item) => item.peakCutDetected);
+  const isOverThreshold = typeof threshold === 'number' && detectedPeakCuts.length > 0;
 
   return (
     <article className="rounded-2xl border border-brand-line bg-white p-4">
@@ -52,7 +52,7 @@ export default function MixedBarLineChart({
 
       {isOverThreshold && showThresholdWarning ? (
         <p className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          ⚠ ピークカット閾値を超える需要が検知されました。
+          ⚠ ピークカット閾値を超えた履歴をグラフ上に保持しています。
         </p>
       ) : null}
 
@@ -60,7 +60,7 @@ export default function MixedBarLineChart({
         <div className="absolute inset-0 z-10 grid grid-cols-12 items-end gap-2 p-3">
           {data.map((point) => {
             const ratio = point.actual / (maxValue * 1.1);
-            const overThreshold = typeof threshold === 'number' && point.actual >= threshold;
+            const overThreshold = !!point.peakCutDetected;
 
             return (
               <div key={`${point.time}-bar`} className="flex h-full items-end" title={`${point.time}: ${point.actual}${unit}`}>
@@ -96,6 +96,16 @@ export default function MixedBarLineChart({
           <span key={`${point.time}-label`}>{point.time}</span>
         ))}
       </div>
+
+      {isOverThreshold && showThresholdWarning ? (
+        <div className="mt-2 flex flex-wrap gap-2 text-xs text-red-700">
+          {detectedPeakCuts.map((item) => (
+            <span key={`${item.time}-badge`} className="rounded-full border border-red-200 bg-red-50 px-2 py-1">
+              発生: {item.time}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       <div className="mt-3 flex flex-wrap gap-3 text-xs text-brand-sub">
         <span>
