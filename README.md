@@ -1,14 +1,27 @@
-# test-codex
+# EMS ダッシュボード（Next.js）
 
-Grafana のダッシュボード体験を参考にした、EMS（Energy Management System）向けのシングルページ UI サンプルです。
+一般ユーザー向けに、やさしい言葉と明るいデザインでエネルギー状況を確認できる EMS UI サンプルです。
+Next.js (App Router) で構築し、ダミー API から定期取得したデータでグラフが自動更新されます。
 
-## 使い方
+## 主な機能
 
-1. `index.html` をブラウザで開く
-2. もしくはローカルサーバーで配信する
+- 親しみやすいホーム向けダッシュボード UI
+- `/api/metrics` でダミーデータを生成
+- クライアント側で 5 秒ごとにデータ再取得
+- SVG グラフをリアルタイム更新
+
+## セットアップ
 
 ```bash
-python3 -m http.server 8080
+npm install
+npm run dev
 ```
 
-ブラウザで `http://localhost:8080` にアクセスしてください。
+`http://localhost:3000` にアクセスしてください。
+
+## ビルド
+
+```bash
+npm run build
+npm run start
+```
