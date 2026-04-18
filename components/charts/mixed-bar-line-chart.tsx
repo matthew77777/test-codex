@@ -156,7 +156,6 @@ export default function MixedBarLineChart({
           <div className="flex flex-col items-end gap-2">
             {controls}
             <div className="flex items-center gap-2">
-            <span className="text-sm text-brand-sub">{unit}</span>
             <button
               type="button"
               onClick={() => setExpanded(true)}
@@ -210,7 +209,10 @@ export default function MixedBarLineChart({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" role="dialog" aria-modal="true">
           <div className="w-full max-w-5xl rounded-2xl bg-white p-5 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">
-              <h4 className="m-0 text-lg font-semibold text-brand-navy">{title}（拡大表示）</h4>
+              <div>
+                <h4 className="m-0 text-lg font-semibold text-brand-navy">{title}（拡大表示）</h4>
+                <p className="m-0 text-xs text-brand-sub">表示単位: 30分集計 / 電力単位: {unit}</p>
+              </div>
               <button
                 type="button"
                 onClick={() => setExpanded(false)}
