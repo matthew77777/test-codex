@@ -42,6 +42,7 @@ export default function MixedBarLineChart({
 
   const detectedPeakCuts = data.filter((item) => item.peakCutDetected);
   const isOverThreshold = typeof threshold === 'number' && detectedPeakCuts.length > 0;
+  const labelStep = Math.max(Math.floor(data.length / 8), 1);
 
   return (
     <article className="rounded-2xl border border-brand-line bg-white p-4">
@@ -57,7 +58,10 @@ export default function MixedBarLineChart({
       ) : null}
 
       <div className="relative h-40 overflow-hidden rounded-xl border border-[#e5eeff] bg-[#f8fbff]">
-        <div className="absolute inset-0 z-10 grid grid-cols-12 items-end gap-2 p-3">
+        <div
+          className="absolute inset-0 z-10 grid items-end gap-2 p-3"
+          style={{ gridTemplateColumns: `repeat(${Math.max(data.length, 1)}, minmax(0, 1fr))` }}
+        >
           {data.map((point) => {
             const ratio = point.actual / (maxValue * 1.1);
             const overThreshold = !!point.peakCutDetected;
@@ -91,9 +95,9 @@ export default function MixedBarLineChart({
         </svg>
       </div>
 
-      <div className="mt-2 grid grid-cols-6 gap-1 text-xs text-brand-sub max-md:grid-cols-4 max-sm:grid-cols-3">
-        {data.map((point) => (
-          <span key={`${point.time}-label`}>{point.time}</span>
+      <div className="mt-2 grid grid-cols-8 gap-1 text-xs text-brand-sub max-md:grid-cols-4 max-sm:grid-cols-3">
+        {data.map((point, index) => (
+          <span key={`${point.time}-label`}>{index % labelStep === 0 ? point.time : ''}</span>
         ))}
       </div>
 

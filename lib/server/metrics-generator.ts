@@ -1,9 +1,18 @@
 import { PEAK_CUT_THRESHOLD_KW, SERIES_POINTS } from '@/lib/constants/thresholds';
 import type { MetricsResponse, SeriesPoint } from '@/lib/types/metrics';
 
+const POINT_INTERVAL_MS = 5_000;
+
 const randomBetween = (min: number, max: number): number => {
   return Number((Math.random() * (max - min) + min).toFixed(2));
 };
+
+const formatTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString('ja-JP', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
 
 const buildSeries = ({
   actualBase,
@@ -20,13 +29,11 @@ const buildSeries = ({
 
   return Array.from({ length: SERIES_POINTS }, (_, i) => {
     const reverseIndex = SERIES_POINTS - 1 - i;
-    const time = new Date(now - reverseIndex * 5 * 60 * 1000).toLocaleTimeString('ja-JP', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const timestamp = now - reverseIndex * POINT_INTERVAL_MS;
 
     return {
-      time,
+      timestamp,
+      time: formatTime(timestamp),
       actual: Number((actualBase + randomBetween(-actualVariance, actualVariance)).toFixed(2)),
       forecast: Number((forecastBase + randomBetween(-forecastVariance, forecastVariance)).toFixed(2))
     };

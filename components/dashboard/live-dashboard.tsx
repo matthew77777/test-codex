@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import MixedBarLineChart from '@/components/charts/mixed-bar-line-chart';
 import { useMetricsStore } from '@/stores/metrics-store';
 import { useShallow } from 'zustand/react/shallow';
@@ -12,13 +12,24 @@ const cardTone: Record<string, string> = {
   purple: 'from-[#f4efff] to-white'
 };
 
+const LOOKBACK_OPTIONS = [
+  { label: '1分', seconds: 60 },
+  { label: '5分', seconds: 300 },
+  { label: '15分', seconds: 900 }
+];
+
 export default function LiveDashboard() {
-  const { data, loading, error, startRealtime } = useMetricsStore(
+  const [lookbackSec, setLookbackSec] = useState(300);
+  const [minutesAgo, setMinutesAgo] = useState(0);
+
+  const { data, loading, error, startRealtime, demandHistory, solarHistory } = useMetricsStore(
     useShallow((state) => ({
       data: state.data,
       loading: state.loading,
       error: state.error,
-      startRealtime: state.startRealtime
+      startRealtime: state.startRealtime,
+      demandHistory: state.demandHistory,
+      solarHistory: state.solarHistory
     }))
   );
 
@@ -26,6 +37,16 @@ export default function LiveDashboard() {
     const cleanup = startRealtime();
     return cleanup;
   }, [startRealtime]);
+
+  const [demandWindow, solarWindow] = useMemo(() => {
+    const endTs = Date.now() - minutesAgo * 60_000;
+    const startTs = endTs - lookbackSec * 1000;
+
+    const takeWindow = (series: typeof demandHistory) =>
+      series.filter((point) => point.timestamp >= startTs && point.timestamp <= endTs).slice(-60);
+
+    return [takeWindow(demandHistory), takeWindow(solarHistory)];
+  }, [demandHistory, solarHistory, lookbackSec, minutesAgo]);
 
   if (loading) {
     return <main className="grid min-h-screen place-items-center text-lg text-brand-sub">読み込み中です…</main>;
@@ -41,12 +62,44 @@ export default function LiveDashboard() {
         <div>
           <p className="m-0 text-sm opacity-85">ようこそ！</p>
           <h1 className="my-2 text-[clamp(1.4rem,2.4vw,2rem)] font-semibold">おうちのエネルギー見える化</h1>
-          <p className="m-0 max-w-[640px] leading-relaxed">消費電力と太陽光発電の実績・予測をリアルタイムに確認できます。</p>
+          <p className="m-0 max-w-[640px] leading-relaxed">実際の時刻の進行に合わせてグラフが更新され、過去ログもさかのぼって確認できます。</p>
         </div>
         <p className="m-0 whitespace-nowrap rounded-full border border-white/30 px-3 py-2 text-sm">
           最終更新: {new Date(data.fetchedAt).toLocaleTimeString('ja-JP')}
         </p>
       </header>
+
+      <section className="mt-4 rounded-2xl border border-brand-line bg-white p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="m-0 text-sm font-medium text-brand-sub">表示期間:</p>
+          {LOOKBACK_OPTIONS.map((option) => (
+            <button
+              key={option.seconds}
+              type="button"
+              onClick={() => setLookbackSec(option.seconds)}
+              className={`rounded-full px-3 py-1 text-sm ${
+                lookbackSec === option.seconds
+                  ? 'bg-[#2248a8] text-white'
+                  : 'border border-brand-line bg-white text-brand-sub hover:bg-[#f5f8ff]'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+
+          <label className="ml-auto flex items-center gap-2 text-sm text-brand-sub">
+            何分前を表示
+            <input
+              type="range"
+              min={0}
+              max={60}
+              value={minutesAgo}
+              onChange={(e) => setMinutesAgo(Number(e.target.value))}
+            />
+            <span className="w-10 text-right">{minutesAgo}分</span>
+          </label>
+        </div>
+      </section>
 
       <section className="mt-[18px] grid grid-cols-4 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
         <article className={`rounded-2xl border border-brand-line bg-gradient-to-b ${cardTone.warm} p-3.5`}>
@@ -75,12 +128,16 @@ export default function LiveDashboard() {
         <MixedBarLineChart
           title="消費電力（実績・予測）"
           unit="kW"
-          data={data.demandSeries}
+          data={demandWindow.length ? demandWindow : data.demandSeries}
           threshold={data.threshold.peakCutKw}
           showThresholdWarning
         />
 
-        <MixedBarLineChart title="太陽光発電（実績・予測）" unit="kW" data={data.solarSeries} />
+        <MixedBarLineChart
+          title="太陽光発電（実績・予測）"
+          unit="kW"
+          data={solarWindow.length ? solarWindow : data.solarSeries}
+        />
 
         <article className="rounded-2xl border border-brand-line bg-white p-4">
           <h3 className="m-0 text-base font-semibold">いまの電力フロー</h3>

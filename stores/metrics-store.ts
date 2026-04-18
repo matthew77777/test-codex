@@ -6,17 +6,22 @@ import type { MetricsResponse, SeriesPoint } from '@/lib/types/metrics';
 
 type MetricsState = {
   data: MetricsResponse | null;
+  demandHistory: SeriesPoint[];
+  solarHistory: SeriesPoint[];
   loading: boolean;
   error: string | null;
   started: boolean;
-  peakCutHistory: Record<string, true>;
+  peakCutHistory: Record<number, true>;
   fetchMetrics: () => Promise<void>;
   applyRealtimeTick: () => void;
   startRealtime: () => () => void;
 };
 
-const nowLabel = () =>
-  new Date().toLocaleTimeString('ja-JP', {
+const HISTORY_LIMIT = 720;
+const LIVE_POINT_INTERVAL_MS = 5_000;
+
+const formatTime = (timestamp: number) =>
+  new Date(timestamp).toLocaleTimeString('ja-JP', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
@@ -24,41 +29,10 @@ const nowLabel = () =>
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-const updateSeries = (series: SeriesPoint[], threshold?: number): SeriesPoint[] => {
-  if (!series.length) return series;
-
-  const next = [...series];
-  const last = next[next.length - 1];
-
-  const moved = Number((last.actual + (Math.random() - 0.5) * 0.2).toFixed(2));
-  const movedForecast = Number((last.forecast + (Math.random() - 0.5) * 0.1).toFixed(2));
-
-  next[next.length - 1] = {
-    ...last,
-    actual: clamp(moved, 0, 8),
-    forecast: clamp(movedForecast, 0, 8)
-  };
-
-  const sec = new Date().getSeconds();
-  if (sec % 5 === 0) {
-    const newPoint: SeriesPoint = {
-      time: nowLabel(),
-      actual: next[next.length - 1].actual,
-      forecast: next[next.length - 1].forecast,
-      peakCutDetected: false
-    };
-    next.shift();
-    next.push(newPoint);
-  }
-
-  if (typeof threshold === 'number') {
-    return next.map((point) => ({
-      ...point,
-      peakCutDetected: point.peakCutDetected || point.actual >= threshold
-    }));
-  }
-
-  return next;
+const pushWithLimit = (history: SeriesPoint[], point: SeriesPoint) => {
+  const next = [...history, point];
+  if (next.length <= HISTORY_LIMIT) return next;
+  return next.slice(next.length - HISTORY_LIMIT);
 };
 
 let fetchIntervalId: ReturnType<typeof setInterval> | null = null;
@@ -66,6 +40,8 @@ let tickIntervalId: ReturnType<typeof setInterval> | null = null;
 
 export const useMetricsStore = create<MetricsState>((set, get) => ({
   data: null,
+  demandHistory: [],
+  solarHistory: [],
   loading: true,
   error: null,
   started: false,
@@ -74,36 +50,39 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
   fetchMetrics: async () => {
     try {
       const res = await fetch('/api/metrics', { cache: 'no-store' });
-      if (!res.ok) {
-        throw new Error('データ取得に失敗しました。');
-      }
+      if (!res.ok) throw new Error('データ取得に失敗しました。');
 
       const json: MetricsResponse = await res.json();
       const threshold = json.threshold.peakCutKw;
-      const history = { ...get().peakCutHistory };
+      const peakCutHistory = { ...get().peakCutHistory };
 
-      json.demandSeries = json.demandSeries.map((point) => {
-        if (point.actual >= threshold) {
-          history[point.time] = true;
-        }
-
+      const normalizedDemand = json.demandSeries.map((point) => {
+        if (point.actual >= threshold) peakCutHistory[point.timestamp] = true;
         return {
           ...point,
-          peakCutDetected: point.actual >= threshold || !!history[point.time]
+          peakCutDetected: point.actual >= threshold || !!peakCutHistory[point.timestamp]
         };
       });
 
+      const demandHistory = normalizedDemand.reduce(
+        (acc, point) => pushWithLimit(acc, point),
+        get().demandHistory
+      );
+      const solarHistory = json.solarSeries.reduce(
+        (acc, point) => pushWithLimit(acc, point),
+        get().solarHistory
+      );
+
       set({
-        data: { ...json, fetchedAt: new Date().toISOString() },
+        data: { ...json, demandSeries: normalizedDemand, fetchedAt: new Date().toISOString() },
+        demandHistory,
+        solarHistory,
+        peakCutHistory,
         loading: false,
-        error: null,
-        peakCutHistory: history
+        error: null
       });
     } catch (err) {
-      set({
-        loading: false,
-        error: err instanceof Error ? err.message : '不明なエラーが発生しました。'
-      });
+      set({ loading: false, error: err instanceof Error ? err.message : '不明なエラーが発生しました。' });
     }
   },
 
@@ -111,36 +90,79 @@ export const useMetricsStore = create<MetricsState>((set, get) => ({
     const current = get().data;
     if (!current) return;
 
-    const nextDemand = updateSeries(current.demandSeries, current.threshold.peakCutKw);
-    const nextSolar = updateSeries(current.solarSeries);
+    const now = Date.now();
+    const threshold = current.threshold.peakCutKw;
+    const peakCutHistory = { ...get().peakCutHistory };
 
-    const history = { ...get().peakCutHistory };
-    nextDemand.forEach((point) => {
-      if (point.peakCutDetected) {
-        history[point.time] = true;
+    const mutateLast = (series: SeriesPoint[], isDemand: boolean): SeriesPoint[] => {
+      if (!series.length) return series;
+      const next = [...series];
+      const last = { ...next[next.length - 1] };
+
+      last.actual = clamp(Number((last.actual + (Math.random() - 0.5) * 0.2).toFixed(2)), 0, 8);
+      last.forecast = clamp(Number((last.forecast + (Math.random() - 0.5) * 0.1).toFixed(2)), 0, 8);
+      last.time = formatTime(now);
+      last.timestamp = now;
+
+      if (isDemand && (last.actual >= threshold || peakCutHistory[last.timestamp])) {
+        peakCutHistory[last.timestamp] = true;
+        last.peakCutDetected = true;
       }
-    });
 
-    const normalizedDemand = nextDemand.map((point) => ({
-      ...point,
-      peakCutDetected: point.peakCutDetected || !!history[point.time]
-    }));
+      next[next.length - 1] = last;
+      return next;
+    };
+
+    const demandSeries = mutateLast(current.demandSeries, true);
+    const solarSeries = mutateLast(current.solarSeries, false);
+
+    let demandHistory = get().demandHistory;
+    let solarHistory = get().solarHistory;
+
+    if (now % LIVE_POINT_INTERVAL_MS < 1000) {
+      const demandPoint = {
+        ...demandSeries[demandSeries.length - 1],
+        timestamp: now,
+        time: formatTime(now)
+      };
+      const solarPoint = {
+        ...solarSeries[solarSeries.length - 1],
+        timestamp: now,
+        time: formatTime(now)
+      };
+
+      demandHistory = pushWithLimit(demandHistory, demandPoint);
+      solarHistory = pushWithLimit(solarHistory, solarPoint);
+
+      const trim = (series: SeriesPoint[], point: SeriesPoint) => [...series.slice(1), point];
+
+      set({
+        data: {
+          ...current,
+          fetchedAt: new Date().toISOString(),
+          demandSeries: trim(demandSeries, demandPoint),
+          solarSeries: trim(solarSeries, solarPoint)
+        },
+        demandHistory,
+        solarHistory,
+        peakCutHistory
+      });
+      return;
+    }
 
     set({
       data: {
         ...current,
         fetchedAt: new Date().toISOString(),
-        demandSeries: normalizedDemand,
-        solarSeries: nextSolar
+        demandSeries,
+        solarSeries
       },
-      peakCutHistory: history
+      peakCutHistory
     });
   },
 
   startRealtime: () => {
-    if (get().started) {
-      return () => undefined;
-    }
+    if (get().started) return () => undefined;
 
     set({ started: true });
     void get().fetchMetrics();

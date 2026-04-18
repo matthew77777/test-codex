@@ -1,4 +1,5 @@
 export type SeriesPoint = {
+  timestamp: number;
   time: string;
   actual: number;
   forecast: number;
