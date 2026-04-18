@@ -44,25 +44,32 @@ export default function MixedBarLineChart({
     typeof threshold === 'number' && data.some((item) => item.actual >= threshold);
 
   return (
-    <article className="panel chart-panel">
-      <div className="panel-head">
-        <h3>{title}</h3>
-        <span>{unit}</span>
+    <article className="rounded-2xl border border-brand-line bg-white p-4">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h3 className="m-0 text-base font-semibold text-brand-navy">{title}</h3>
+        <span className="text-sm text-brand-sub">{unit}</span>
       </div>
+
       {isOverThreshold && showThresholdWarning ? (
-        <p className="alert-banner">⚠ ピークカット閾値を超える需要が検知されました。</p>
+        <p className="mb-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          ⚠ ピークカット閾値を超える需要が検知されました。
+        </p>
       ) : null}
 
-      <div className="mixed-chart" role="img" aria-label={`${title} グラフ`}>
-        <div className="bars">
+      <div className="relative h-40 overflow-hidden rounded-xl border border-[#e5eeff] bg-[#f8fbff]">
+        <div className="absolute inset-0 z-10 grid grid-cols-12 items-end gap-2 p-3">
           {data.map((point) => {
             const ratio = point.actual / (maxValue * 1.1);
             const overThreshold = typeof threshold === 'number' && point.actual >= threshold;
 
             return (
-              <div key={`${point.time}-bar`} className="bar-wrap" title={`${point.time}: ${point.actual}${unit}`}>
+              <div key={`${point.time}-bar`} className="flex h-full items-end" title={`${point.time}: ${point.actual}${unit}`}>
                 <span
-                  className={`bar ${overThreshold ? 'bar-alert' : ''}`}
+                  className={`w-full rounded-t-md ${
+                    overThreshold
+                      ? 'bg-gradient-to-b from-[#ff9d9d] to-red-500'
+                      : 'bg-gradient-to-b from-[#85a7ff] to-[#4f7fff]'
+                  }`}
                   style={{ height: `${Math.max(ratio * 100, 3)}%` }}
                 />
               </div>
@@ -70,36 +77,37 @@ export default function MixedBarLineChart({
           })}
         </div>
 
-        <svg viewBox="0 0 520 120" preserveAspectRatio="none" aria-hidden="true">
-          <polyline points={forecastLine} className="line forecast" />
+        <svg viewBox="0 0 520 120" preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 z-20 h-full w-full">
+          <polyline points={forecastLine} className="fill-none stroke-[#15b877] [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:3]" />
           {typeof threshold === 'number' ? (
             <line
               x1="0"
               y1={120 - (threshold / (maxValue * 1.1)) * 120}
               x2="520"
               y2={120 - (threshold / (maxValue * 1.1)) * 120}
-              className="threshold-line"
+              className="stroke-[#fb923c] [stroke-dasharray:6_5] [stroke-width:2]"
             />
           ) : null}
         </svg>
       </div>
 
-      <div className="labels">
+      <div className="mt-2 grid grid-cols-6 gap-1 text-xs text-brand-sub max-md:grid-cols-4 max-sm:grid-cols-3">
         {data.map((point) => (
           <span key={`${point.time}-label`}>{point.time}</span>
         ))}
       </div>
 
-      <div className="legend">
+      <div className="mt-3 flex flex-wrap gap-3 text-xs text-brand-sub">
         <span>
-          <i className="legend-box" /> 実績（棒）
+          <i className="mr-1 inline-block h-2.5 w-2.5 rounded-sm bg-[#4f7fff]" /> 実績（棒）
         </span>
         <span>
-          <i className="legend-line" /> 予測（折れ線）
+          <i className="mr-1 inline-block w-4 border-t-2 border-[#15b877]" /> 予測（折れ線）
         </span>
         {typeof threshold === 'number' ? (
           <span>
-            <i className="legend-threshold" /> 閾値 {threshold.toFixed(1)} {unit}
+            <i className="mr-1 inline-block w-4 border-t-2 border-dashed border-[#fb923c]" /> 閾値 {threshold.toFixed(1)}{' '}
+            {unit}
           </span>
         ) : null}
       </div>

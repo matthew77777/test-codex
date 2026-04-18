@@ -1,4 +1,4 @@
-# EMS ダッシュボード（Next.js）
+# EMS ダッシュボード（Next.js + Tailwind CSS）
 
 一般ユーザー向けに、やさしい言葉で電力状況を確認できる EMS UI サンプルです。
 Next.js (App Router) で構築し、ダミー API から定期取得したデータでグラフが更新されます。
@@ -18,6 +18,7 @@ Next.js (App Router) で構築し、ダミー API から定期取得したデー
 - `hooks`: データ取得ロジック（UI と分離）
 - `components/charts`: グラフ描画コンポーネント
 - API レスポンスに `Cache-Control: no-store`、`X-Content-Type-Options: nosniff` を付与
+- スタイルは Tailwind CSS で統一管理
 
 ## セットアップ
 
