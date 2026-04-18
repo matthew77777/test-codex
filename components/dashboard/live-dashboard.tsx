@@ -1,7 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
 import MixedBarLineChart from '@/components/charts/mixed-bar-line-chart';
-import { useLiveMetrics } from '@/hooks/use-live-metrics';
+import { useMetricsStore } from '@/stores/metrics-store';
+import { useShallow } from 'zustand/react/shallow';
 
 const cardTone: Record<string, string> = {
   warm: 'from-[#fff6ea] to-white',
@@ -11,7 +13,19 @@ const cardTone: Record<string, string> = {
 };
 
 export default function LiveDashboard() {
-  const { data, loading, error } = useLiveMetrics();
+  const { data, loading, error, startRealtime } = useMetricsStore(
+    useShallow((state) => ({
+      data: state.data,
+      loading: state.loading,
+      error: state.error,
+      startRealtime: state.startRealtime
+    }))
+  );
+
+  useEffect(() => {
+    const cleanup = startRealtime();
+    return cleanup;
+  }, [startRealtime]);
 
   if (loading) {
     return <main className="grid min-h-screen place-items-center text-lg text-brand-sub">読み込み中です…</main>;
@@ -27,7 +41,7 @@ export default function LiveDashboard() {
         <div>
           <p className="m-0 text-sm opacity-85">ようこそ！</p>
           <h1 className="my-2 text-[clamp(1.4rem,2.4vw,2rem)] font-semibold">おうちのエネルギー見える化</h1>
-          <p className="m-0 max-w-[640px] leading-relaxed">消費電力と太陽光発電の実績・予測を同時に確認できます。</p>
+          <p className="m-0 max-w-[640px] leading-relaxed">消費電力と太陽光発電の実績・予測をリアルタイムに確認できます。</p>
         </div>
         <p className="m-0 whitespace-nowrap rounded-full border border-white/30 px-3 py-2 text-sm">
           最終更新: {new Date(data.fetchedAt).toLocaleTimeString('ja-JP')}
