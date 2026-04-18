@@ -5,30 +5,26 @@ type Option = {
 
 type Props = {
   options: Option[];
-  lookbackSec: number;
-  onLookbackChange: (seconds: number) => void;
-  compact?: boolean;
+  value: number;
+  onChange: (seconds: number) => void;
 };
 
-export default function ChartControls({ options, lookbackSec, onLookbackChange, compact = false }: Props) {
+export default function ChartControls({ options, value, onChange }: Props) {
   return (
-    <div className={`flex flex-wrap items-center gap-2 ${compact ? 'justify-end' : ''}`}>
-      {!compact ? <p className="m-0 text-sm font-medium text-brand-sub">表示期間:</p> : null}
-      {options.map((option) => (
-        <button
-          key={option.seconds}
-          type="button"
-          onClick={() => onLookbackChange(option.seconds)}
-          className={`rounded-full px-3 py-1 text-xs ${
-            lookbackSec === option.seconds
-              ? 'bg-[#2248a8] text-white'
-              : 'border border-brand-line bg-white text-brand-sub hover:bg-[#f5f8ff]'
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-      <span className="text-xs text-brand-sub">30分集計</span>
-    </div>
+    <label className="flex items-center gap-2 text-xs text-brand-sub">
+      期間
+      <select
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="rounded-md border border-brand-line bg-white px-2 py-1 text-xs text-brand-navy"
+      >
+        {options.map((option) => (
+          <option key={option.seconds} value={option.seconds}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span>30分集計</span>
+    </label>
   );
 }

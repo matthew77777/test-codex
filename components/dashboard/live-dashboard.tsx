@@ -58,7 +58,8 @@ const downsample = (series: SeriesPoint[]) => {
 };
 
 export default function LiveDashboard() {
-  const [lookbackSec, setLookbackSec] = useState(24 * 60 * 60);
+  const [demandLookbackSec, setDemandLookbackSec] = useState(24 * 60 * 60);
+  const [solarLookbackSec, setSolarLookbackSec] = useState(24 * 60 * 60);
 
   const { data, loading, error, startRealtime, demandHistory, solarHistory } = useMetricsStore(
     useShallow((state) => ({
@@ -76,17 +77,23 @@ export default function LiveDashboard() {
     return cleanup;
   }, [startRealtime]);
 
-  const [demandWindow, solarWindow] = useMemo(() => {
+  const demandWindow = useMemo(() => {
     const endTs = Date.now();
-    const startTs = endTs - lookbackSec * 1000;
+    const startTs = endTs - demandLookbackSec * 1000;
 
-    const takeWindow = (series: typeof demandHistory) =>
-      downsample(
-        aggregateByThirtyMin(series.filter((point) => point.timestamp >= startTs && point.timestamp <= endTs))
-      );
+    return downsample(
+      aggregateByThirtyMin(demandHistory.filter((point) => point.timestamp >= startTs && point.timestamp <= endTs))
+    );
+  }, [demandHistory, demandLookbackSec]);
 
-    return [takeWindow(demandHistory), takeWindow(solarHistory)];
-  }, [demandHistory, solarHistory, lookbackSec]);
+  const solarWindow = useMemo(() => {
+    const endTs = Date.now();
+    const startTs = endTs - solarLookbackSec * 1000;
+
+    return downsample(
+      aggregateByThirtyMin(solarHistory.filter((point) => point.timestamp >= startTs && point.timestamp <= endTs))
+    );
+  }, [solarHistory, solarLookbackSec]);
 
   if (loading) {
     return <main className="grid min-h-screen place-items-center text-lg text-brand-sub">読み込み中です…</main>;
@@ -102,7 +109,7 @@ export default function LiveDashboard() {
         <div>
           <p className="m-0 text-sm opacity-85">ようこそ！</p>
           <h1 className="my-2 text-[clamp(1.4rem,2.4vw,2rem)] font-semibold">おうちのエネルギー見える化</h1>
-          <p className="m-0 max-w-[640px] leading-relaxed">グラフは30分単位で集計し、1日〜1年の単位で切り替えて確認できます。</p>
+          <p className="m-0 max-w-[640px] leading-relaxed">グラフは30分単位で集計し、各グラフごとに表示期間を選択できます。</p>
         </div>
         <p className="m-0 whitespace-nowrap rounded-full border border-white/30 px-3 py-2 text-sm">
           最終更新: {new Date(data.fetchedAt).toLocaleTimeString('ja-JP')}
@@ -121,9 +128,8 @@ export default function LiveDashboard() {
           controls={
             <ChartControls
               options={LOOKBACK_OPTIONS}
-              lookbackSec={lookbackSec}
-              onLookbackChange={setLookbackSec}
-              compact
+              value={demandLookbackSec}
+              onChange={setDemandLookbackSec}
             />
           }
         />
@@ -135,9 +141,8 @@ export default function LiveDashboard() {
           controls={
             <ChartControls
               options={LOOKBACK_OPTIONS}
-              lookbackSec={lookbackSec}
-              onLookbackChange={setLookbackSec}
-              compact
+              value={solarLookbackSec}
+              onChange={setSolarLookbackSec}
             />
           }
         />
