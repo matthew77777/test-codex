@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply m-0 bg-gradient-to-b from-[#edf4ff] via-[#f8fbff] to-[#f3f7ff] text-brand-navy;
+  font-family: 'Inter', 'Noto Sans JP', sans-serif;
+}
